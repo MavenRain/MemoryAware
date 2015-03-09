@@ -18,10 +18,10 @@ namespace Core.CSharp
             var usedMemoryMb = MemoryManager.AppMemoryUsage / 1000000;
             var totalMemoryUsageLimitMb = MemoryManager.AppMemoryUsageLimit / 1000000;
             var availableAppMemoryMb = totalMemoryUsageLimitMb - usedMemoryMb;
-            //Test to see if usage is 95% or greater. If not, return.
-            if (!(usedMemoryMb >= 0.95 * totalMemoryUsageLimitMb)) return;
-            //If app memory usage is at least 95%, fire event
-	        ApplicationMemoryCriticalLimitReached?.Invoke("Better clean up some resources!", availableAppMemoryMb);
+            //Test to see if usage is 90% or greater. If not, return.
+            if (!(usedMemoryMb >= 0.90 * totalMemoryUsageLimitMb)) return;
+            //If app memory usage is at least 90%, fire event
+	        ApplicationMemoryCriticalLimitReached("Better clean up some resources!", availableAppMemoryMb);
         }
     }
 }
