@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
@@ -36,7 +37,7 @@ namespace Core.CSharp
 	    {
 		    if (IsOnlyDiskReadAndWritePreferred)
 		    {
-			    var storageFolder = Package.Current.InstalledLocation.CreateFolderAsync(
+			    var storageFolder = ApplicationData.Current.LocalFolder.CreateFolderAsync(
 				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists);
 			    return FileIO.WriteBytesAsync(
 				    storageFolder.GetResults().CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting).GetResults(),
@@ -52,10 +53,14 @@ namespace Core.CSharp
 		    {
 			    return Task.Run(() => BackingStore[identifier]).AsAsyncOperation();
 		    }
+		    var file = GetStorageFile(identifier);
+			return file.Result == null ? Task.Run(() => (IList<byte>)new List<byte>()).AsAsyncOperation() : Task.Run(() => (IList<byte>)FileIO.ReadBufferAsync(file.Result).GetResults().ToArray().ToList()).AsAsyncOperation();
+	    }
 
-			var file = Package.Current.InstalledLocation.CreateFolderAsync(
-                        "DiskAndMemoryReaderAndWriter",CreationCollisionOption.OpenIfExists).GetResults().GetFileAsync(identifier);
-			return file.GetResults() == null ? Task.Run(() => (IList<byte>)new List<byte>()).AsAsyncOperation() : Task.Run(() => (IList<byte>)FileIO.ReadBufferAsync(file.GetResults()).GetResults().ToArray().ToList()).AsAsyncOperation();
+	    private static async Task<StorageFile> GetStorageFile(string identifier)
+	    {
+		    return await (await ApplicationData.Current.LocalFolder.CreateFolderAsync(
+				"DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists)).GetFileAsync(identifier);
 	    }
 
         public static IAsyncAction DeleteAsync(string identifier)
@@ -66,7 +71,7 @@ namespace Core.CSharp
             }
             try
             {
-                return Package.Current.InstalledLocation.GetFolderAsync(
+                return ApplicationData.Current.LocalFolder.GetFolderAsync(
                     "DiskAndMemoryReaderAndWriter").GetResults().GetFileAsync(identifier).GetResults().DeleteAsync();
             }
             catch (FileNotFoundException fileNotFoundException)
