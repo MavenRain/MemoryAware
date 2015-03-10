@@ -1,17 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Core.CSharp;
 using Microsoft.WindowsAzure.Storage;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
@@ -21,7 +12,7 @@ namespace StorageRetrievalSample
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
-    public sealed partial class MainPage : Page
+    public sealed partial class MainPage
     {
         public MainPage()
         {
@@ -46,12 +37,17 @@ namespace StorageRetrievalSample
             // this event is handled for you.
         }
 
-		private void storageSample_Click(object sender, RoutedEventArgs e)
+		private async void storageSample_Click(object sender, RoutedEventArgs e)
 		{
 			var blobClient =
 				(CloudStorageAccount.Parse(
 					"DefaultEndpointsProtocol=https;AccountName=mavenrain;AccountKey=kPrWKjlH1Es1UQOWSHhZgDDiYuyC2EcrZkCulepl9uyCEUe7+gVNhmWqOQM6xT+GGcA79mENChT8eF2qrhTYOw==")).CreateCloudBlobClient();
-			var container = blobClient.GetContainerReference("mavenrain");
+			var resultSegment = await (blobClient.GetContainerReference("mavenrain").ListBlobsSegmentedAsync(null));
+			var pictureCount = 0;
+			foreach (var blob in resultSegment.Results)
+			{
+				await blobClient.GetContainerReference("mavenrain").GetBlockBlobReference(blob.Uri.OriginalString).DownloadToByteArrayAsync((await DiskAndMemoryReaderAndWriter.ReadAsync("picture"+ (pictureCount++).ToString())).ToArray(),0);
+			}
 		}
 	}
 }

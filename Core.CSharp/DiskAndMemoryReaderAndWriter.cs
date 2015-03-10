@@ -28,11 +28,11 @@ namespace Core.CSharp
             MemoryWatcher.ApplicationMemoryCriticalLimitReached += TakeMemoryCriticalAction;
         }
 
-        private static readonly Dictionary<string, Byte[]> BackingStore = new Dictionary<string, Byte[]>();
+        private static readonly Dictionary<string, IList<byte>> BackingStore = new Dictionary<string, IList<byte>>();
 
         public static bool IsOnlyDiskReadAndWritePreferred { get; set; }
 
-	    public static IAsyncAction WriteAsync(string identifier, [ReadOnlyArray] Byte[] content)
+	    public static IAsyncAction WriteAsync(string identifier,  IList<byte> content)
 	    {
 		    if (IsOnlyDiskReadAndWritePreferred)
 		    {
@@ -40,29 +40,29 @@ namespace Core.CSharp
 				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists);
 			    return FileIO.WriteBytesAsync(
 				    storageFolder.GetResults().CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting).GetResults(),
-				    content);
+				    content.ToArray());
 		    }
 		    BackingStore.Add(identifier, content);
 		    return ThreadPool.RunAsync((workItem) => { });
 	    }
 
-	    public static IAsyncOperation<Byte[]> ReadAsync(string identifier)
+	    public static IAsyncOperation<IList<byte>> ReadAsync(string identifier)
 	    {
 		    if (BackingStore.ContainsKey(identifier))
 		    {
-			    return Task.Run<Byte[]>(() => BackingStore[identifier]).AsAsyncOperation();
+			    return Task.Run(() => BackingStore[identifier]).AsAsyncOperation();
 		    }
 
-			var file = Package.Current.InstalledLocation.GetFolderAsync(
-                        "DiskAndMemoryReaderAndWriter").GetResults().GetFileAsync(identifier);
-            return file.GetResults() == null ? Task.Run<Byte[]>(() => new Byte[0]).AsAsyncOperation() : Task.Run<Byte[]>(() => FileIO.ReadBufferAsync(file.GetResults()).GetResults().ToArray()).AsAsyncOperation(); 	
-		}
+			var file = Package.Current.InstalledLocation.CreateFolderAsync(
+                        "DiskAndMemoryReaderAndWriter",CreationCollisionOption.OpenIfExists).GetResults().GetFileAsync(identifier);
+			return file.GetResults() == null ? Task.Run(() => (IList<byte>)new List<byte>()).AsAsyncOperation() : Task.Run(() => (IList<byte>)FileIO.ReadBufferAsync(file.GetResults()).GetResults().ToArray().ToList()).AsAsyncOperation();
+	    }
 
         public static IAsyncAction DeleteAsync(string identifier)
         {
             if (BackingStore.ContainsKey(identifier))
             {
-	            return Task.Run<bool>(() => BackingStore.Remove(identifier)).AsAsyncAction();
+	            return Task.Run(() => BackingStore.Remove(identifier)).AsAsyncAction();
             }
             try
             {
@@ -79,7 +79,7 @@ namespace Core.CSharp
             }
         }
 
-        public static IAsyncAction ReplaceAsync(string oldIdentifier, string newIdentifier, [ReadOnlyArray]Byte[] content)
+        public static IAsyncAction ReplaceAsync(string oldIdentifier, string newIdentifier, IList<byte> content)
         {
 			DeleteAsync(oldIdentifier).GetResults();
 	        return WriteAsync(newIdentifier, content);

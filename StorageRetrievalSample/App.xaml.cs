@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.Globalization;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media.Animation;
@@ -36,7 +38,7 @@ namespace StorageRetrievalSample
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
 #if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
+            if (Debugger.IsAttached)
             {
                 DebugSettings.EnableFrameRateCounter = true;
             }
@@ -52,7 +54,7 @@ namespace StorageRetrievalSample
 	            rootFrame = new Frame
 	            {
 		            CacheSize = 1,
-		            Language = Windows.Globalization.ApplicationLanguages.Languages[0]
+		            Language = ApplicationLanguages.Languages[0]
 	            };
 
 	            // TODO: change this value to a cache size that is appropriate for your application
