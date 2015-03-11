@@ -19,9 +19,14 @@ namespace Core.CSharp
             var ejectionCount = BackingStore.Count / 2;
             for (var removalIndex = 0; removalIndex < ejectionCount; ejectionCount++)
             {
-                WriteAsync(BackingStore.Last().Key, BackingStore.Last().Value).GetResults();
+                BlockToWrite();
                 BackingStore.Remove(BackingStore.Last().Key);
             }
+        }
+
+        static async void BlockToWrite()
+        {
+            await WriteAsync(BackingStore.Last().Key, BackingStore.Last().Value);
         }
 
         static DiskAndMemoryReaderAndWriter()
@@ -29,7 +34,7 @@ namespace Core.CSharp
             MemoryWatcher.ApplicationMemoryCriticalLimitReached += TakeMemoryCriticalAction;
         }
 
-        private static readonly Dictionary<string, IList<byte>> BackingStore = new Dictionary<string, IList<byte>>();
+        static readonly Dictionary<string, IList<byte>> BackingStore = new Dictionary<string, IList<byte>>();
 
         public static bool IsOnlyDiskReadAndWritePreferred { get; set; }
 
@@ -38,26 +43,30 @@ namespace Core.CSharp
 		    if (IsOnlyDiskReadAndWritePreferred)
 		    {
 			    var storageFolder = ApplicationData.Current.LocalFolder.CreateFolderAsync(
-				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists);
-			    return FileIO.WriteBytesAsync(
-				    storageFolder.GetResults().CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting).GetResults(),
-				    content.ToArray());
+				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists).AsTask();
+                return ForceWriteToDisk(storageFolder, identifier, content).AsAsyncAction();
 		    }
 		    BackingStore.Add(identifier, content);
 		    return ThreadPool.RunAsync((workItem) => { });
 	    }
 
+        static async Task ForceWriteToDisk(Task<StorageFolder> storageFolder, string identifier, IList<byte> content)
+        {
+            await FileIO.WriteBytesAsync((IStorageFile)(await (await storageFolder).CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting)), content.ToArray());
+        }
+
 	    public static IAsyncOperation<IList<byte>> ReadAsync(string identifier)
 	    {
-		    if (BackingStore.ContainsKey(identifier))
-		    {
-			    return Task.Run(() => BackingStore[identifier]).AsAsyncOperation();
-		    }
-		    var file = GetStorageFile(identifier);
-			return file.Result == null ? Task.Run(() => (IList<byte>)new List<byte>()).AsAsyncOperation() : Task.Run(() => (IList<byte>)FileIO.ReadBufferAsync(file.Result).GetResults().ToArray().ToList()).AsAsyncOperation();
+		    if (BackingStore.ContainsKey(identifier)) return Task.Run(() => BackingStore[identifier]).AsAsyncOperation();
+			return GetByteArray(GetStorageFile(identifier)).AsAsyncOperation();
 	    }
 
-	    private static async Task<StorageFile> GetStorageFile(string identifier)
+        static async Task<IList<byte>> GetByteArray(Task<StorageFile> storageFileTask)
+        {
+            return (IList<byte>)(await FileIO.ReadBufferAsync(await storageFileTask)).ToArray().ToList();
+        }
+
+	    static async Task<StorageFile> GetStorageFile(string identifier)
 	    {
 		    return await (await ApplicationData.Current.LocalFolder.CreateFolderAsync(
 				"DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists)).GetFileAsync(identifier);
@@ -71,17 +80,23 @@ namespace Core.CSharp
             }
             try
             {
-                return ApplicationData.Current.LocalFolder.GetFolderAsync(
-                    "DiskAndMemoryReaderAndWriter").GetResults().GetFileAsync(identifier).GetResults().DeleteAsync();
+                return AttemptToDeleteFromDisk(identifier).AsAsyncAction();
             }
             catch (FileNotFoundException fileNotFoundException)
             {
-                FileIO.WriteTextAsync(Package.Current.InstalledLocation.CreateFolderAsync(
-                    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists)
-                    .GetResults()
-                    .CreateFileAsync("DiskAndMemoryReaderAndWriterErrorLog.txt", CreationCollisionOption.ReplaceExisting).GetResults(), "An attempt to delete a file that did not exists was made.").GetResults();
+                HandleError();
                 throw new FileNotFoundException("An attempt to delete a file that did not exists was made.  Most likely, a delete occured before a creation, or two deletions happens in succession.", "DiskAndMemoryReaderAndWriterErrorLog.txt", fileNotFoundException);
             }
+        }
+
+        static async void HandleError()
+        {
+            await FileIO.WriteTextAsync(await (await ApplicationData.Current.LocalFolder.CreateFolderAsync("DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists)).CreateFileAsync("DiskAndMemoryReaderAndWriterErrorLog.txt", CreationCollisionOption.ReplaceExisting), "An attempt to delete a file that did not exists was made.");
+        }
+
+        static async Task AttemptToDeleteFromDisk(string identifier)
+        {
+            await (await (await ApplicationData.Current.LocalFolder.GetFolderAsync("DiskAndMemoryReaderAndWriter")).GetFileAsync(identifier)).DeleteAsync();
         }
 
         public static IAsyncAction ReplaceAsync(string oldIdentifier, string newIdentifier, IList<byte> content)
