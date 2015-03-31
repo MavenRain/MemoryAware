@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-using Windows.ApplicationModel;
 using Windows.Foundation;
 using Windows.Storage;
 using Windows.System.Threading;
@@ -34,11 +32,11 @@ namespace Core.CSharp
             MemoryWatcher.ApplicationMemoryCriticalLimitReached += TakeMemoryCriticalAction;
         }
 
-        static readonly Dictionary<string, IList<byte>> BackingStore = new Dictionary<string, IList<byte>>();
+        static readonly IDictionary<string, IEnumerable<byte>> BackingStore = new Dictionary<string, IEnumerable<byte>>();
 
         public static bool IsOnlyDiskReadAndWritePreferred { get; set; }
 
-	    public static IAsyncAction WriteAsync(string identifier,  IList<byte> content)
+	    public static IAsyncAction WriteAsync(string identifier,  IEnumerable<byte> content)
 	    {
 		    if (IsOnlyDiskReadAndWritePreferred)
 		    {
@@ -46,24 +44,23 @@ namespace Core.CSharp
 				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists).AsTask();
                 return ForceWriteToDisk(storageFolder, identifier, content).AsAsyncAction();
 		    }
-		    BackingStore.Add(identifier, content);
+		    BackingStore.Add(new KeyValuePair<string,IEnumerable<byte>>(identifier,content));
 		    return ThreadPool.RunAsync((workItem) => { });
 	    }
 
-        static async Task ForceWriteToDisk(Task<StorageFolder> storageFolder, string identifier, IList<byte> content)
+        static async Task ForceWriteToDisk(Task<StorageFolder> storageFolder, string identifier, IEnumerable<byte> content)
         {
-            await FileIO.WriteBytesAsync((IStorageFile)(await (await storageFolder).CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting)), content.ToArray());
+            await FileIO.WriteBytesAsync(await (await storageFolder).CreateFileAsync(identifier, CreationCollisionOption.ReplaceExisting), content.ToArray());
         }
 
-	    public static IAsyncOperation<IList<byte>> ReadAsync(string identifier)
+	    public static IAsyncOperation<IEnumerable<byte>> ReadAsync(string identifier)
 	    {
-		    if (BackingStore.ContainsKey(identifier)) return Task.Run(() => BackingStore[identifier]).AsAsyncOperation();
-			return GetByteArray(GetStorageFile(identifier)).AsAsyncOperation();
+	        return BackingStore.ContainsKey(identifier) ? Task.Run(() => BackingStore[identifier]).AsAsyncOperation() : GetByteArray(GetStorageFile(identifier)).AsAsyncOperation();
 	    }
 
-        static async Task<IList<byte>> GetByteArray(Task<StorageFile> storageFileTask)
+        static async Task<IEnumerable<byte>> GetByteArray(Task<StorageFile> storageFileTask)
         {
-            return (IList<byte>)(await FileIO.ReadBufferAsync(await storageFileTask)).ToArray().ToList();
+            return (IEnumerable<byte>)(await FileIO.ReadBufferAsync(await storageFileTask)).ToArray().ToList();
         }
 
 	    static async Task<StorageFile> GetStorageFile(string identifier)
@@ -99,7 +96,7 @@ namespace Core.CSharp
             await (await (await ApplicationData.Current.LocalFolder.GetFolderAsync("DiskAndMemoryReaderAndWriter")).GetFileAsync(identifier)).DeleteAsync();
         }
 
-        public static IAsyncAction ReplaceAsync(string oldIdentifier, string newIdentifier, IList<byte> content)
+        public static IAsyncAction ReplaceAsync(string oldIdentifier, string newIdentifier, IEnumerable<byte> content)
         {
 			DeleteAsync(oldIdentifier).GetResults();
 	        return WriteAsync(newIdentifier, content);

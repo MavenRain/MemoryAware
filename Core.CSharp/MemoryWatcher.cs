@@ -21,7 +21,8 @@ namespace Core.CSharp
             //Test to see if usage is 90% or greater. If not, return.
             if (!(usedMemoryMb >= 0.90 * totalMemoryUsageLimitMb)) return;
             //If app memory usage is at least 90%, fire event
-	        ApplicationMemoryCriticalLimitReached("Better clean up some resources!", availableAppMemoryMb);
+            if (ApplicationMemoryCriticalLimitReached != null)
+                ApplicationMemoryCriticalLimitReached("Better clean up some resources!", availableAppMemoryMb);
         }
     }
 }
