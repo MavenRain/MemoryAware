@@ -38,14 +38,16 @@ namespace Core.CSharp
 
 	    public static IAsyncAction WriteAsync(string identifier,  IEnumerable<byte> content)
 	    {
-		    if (IsOnlyDiskReadAndWritePreferred)
+		    return ThreadPool.RunAsync(workItem =>
 		    {
-			    var storageFolder = ApplicationData.Current.LocalFolder.CreateFolderAsync(
-				    "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists).AsTask();
-                return ForceWriteToDisk(storageFolder, identifier, content).AsAsyncAction();
-		    }
-		    BackingStore.Add(new KeyValuePair<string,IEnumerable<byte>>(identifier,content));
-		    return ThreadPool.RunAsync((workItem) => { });
+                if (IsOnlyDiskReadAndWritePreferred)
+                {
+                    var storageFolder = ApplicationData.Current.LocalFolder.CreateFolderAsync(
+                        "DiskAndMemoryReaderAndWriter", CreationCollisionOption.OpenIfExists).AsTask();
+                    ForceWriteToDisk(storageFolder, identifier, content).ConfigureAwait(true);
+                }
+                else BackingStore.Add(new KeyValuePair<string, IEnumerable<byte>>(identifier, content));
+		    });
 	    }
 
         static async Task ForceWriteToDisk(Task<StorageFolder> storageFolder, string identifier, IEnumerable<byte> content)

@@ -80,11 +80,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DiskAndMemoryReaderAndWriter.cs" />
+    <Compile Include="DiskStream.cs" />
     <Compile Include="MemoryWatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core.CSharp.Interface\Core.CSharp.Interface.csproj">
+      <Project>{c6e9dbf4-6efc-468f-9dcb-881421448eb5}</Project>
+      <Name>Core.CSharp.Interface</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
     <VisualStudioVersion>12.0</VisualStudioVersion>
