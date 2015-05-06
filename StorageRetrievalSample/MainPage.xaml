@@ -8,8 +8,20 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-	<Grid>
-		<Button x:Name="storageSample" Content="Run Storage Sample" HorizontalAlignment="Left" Margin="76,230,0,0" VerticalAlignment="Top" Height="96" Width="243" Click="storageSample_Click"/>
+    <Grid>
+        <Button x:Name="storageSample" Content="Run Storage Sample" HorizontalAlignment="Left" Margin="80,13,0,0" VerticalAlignment="Top" Height="96" Width="243" Click="storageSample_Click"/>
+        <ListView x:Name="listOfPics" HorizontalAlignment="Left" Height="230" Margin="80,128,0,0" VerticalAlignment="Top" Width="243">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <Image Source="{Binding PictureValue}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <TextBox x:Name="storedFilename" HorizontalAlignment="Left" Margin="80,384,0,0" TextWrapping="Wrap" Text="sample.xml" VerticalAlignment="Top" Height="44" Width="243"/>
+        <Button x:Name="putButton" Content="Put Files" HorizontalAlignment="Left" Margin="80,450,0,0" VerticalAlignment="Top" Height="44" Width="243" Click="putButton_Click"/>
+        <Button x:Name="getButton" Content="Get Files" HorizontalAlignment="Left" Margin="80,525,0,0" VerticalAlignment="Top" Width="243" Click="getButton_Click"/>
 
-	</Grid>
+    </Grid>
 </Page>

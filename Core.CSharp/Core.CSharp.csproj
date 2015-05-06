@@ -79,8 +79,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DiskAndMemoryReaderAndWriter.cs" />
-    <Compile Include="DiskStream.cs" />
+    <Compile Include="AstuteImageList.cs" />
     <Compile Include="MemoryWatcher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

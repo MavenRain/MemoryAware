@@ -1,9 +1,13 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using Windows.ApplicationModel.Activation;
+using Windows.Storage;
+using Windows.Storage.Pickers;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 using Core.CSharp;
-using Microsoft.WindowsAzure.Storage;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
 
@@ -14,11 +18,16 @@ namespace StorageRetrievalSample
     /// </summary>
     public sealed partial class MainPage
     {
+        private readonly AstuteImageList cachedPictures;
+        private readonly ObservableCollection<Pictures> pictureCollection = new ObservableCollection<Pictures>();
+        private readonly List<StorageFile> pictureFileStorage = new List<StorageFile>();
         public MainPage()
         {
             InitializeComponent();
 
             NavigationCacheMode = NavigationCacheMode.Required;
+
+            cachedPictures = new AstuteImageList(storedFilename.Text);
         }
 
         /// <summary>
@@ -37,17 +46,46 @@ namespace StorageRetrievalSample
             // this event is handled for you.
         }
 
-		private async void storageSample_Click(object sender, RoutedEventArgs e)
+		private void storageSample_Click(object sender, RoutedEventArgs e)
 		{
-			var blobClient =
-				(CloudStorageAccount.Parse(
-					"DefaultEndpointsProtocol=https;AccountName=mavenrain;AccountKey=kPrWKjlH1Es1UQOWSHhZgDDiYuyC2EcrZkCulepl9uyCEUe7+gVNhmWqOQM6xT+GGcA79mENChT8eF2qrhTYOw==")).CreateCloudBlobClient();
-			var resultSegment = await (blobClient.GetContainerReference("mavenrain").ListBlobsSegmentedAsync(null));
-			var pictureCount = 0;
-			foreach (var blob in resultSegment.Results)
-			{
-				await blobClient.GetContainerReference("mavenrain").GetBlockBlobReference(blob.Uri.OriginalString).DownloadToByteArrayAsync((await DiskAndMemoryReaderAndWriter.ReadAsync("picture"+ (pictureCount++).ToString())).ToArray(),0);
-			}
+		    (new FileOpenPicker()
+		    {
+		        ViewMode = PickerViewMode.Thumbnail,
+		        SuggestedStartLocation = PickerLocationId.PicturesLibrary
+		    }).PickMultipleFilesAndContinue();
+
 		}
-	}
+
+        public void ContinueFromPicker(FileOpenPickerContinuationEventArgs args)
+        {
+            foreach (var file in args.Files)
+            {
+                pictureFileStorage.Add(file);
+                pictureCollection.Add(new Pictures {PictureValue = file.Path});
+            }
+        }
+
+        private async void putButton_Click(object sender, RoutedEventArgs e)
+        {
+            var enumerableCollection = new List<BitmapImage>();
+            foreach (var pictureReference in pictureFileStorage)
+            {
+                var bitmap = new BitmapImage();
+                await bitmap.SetSourceAsync(await pictureReference.OpenAsync(FileAccessMode.Read));
+                enumerableCollection.Add(bitmap);
+            }
+            await cachedPictures.PutValueAsync(enumerableCollection);
+        }
+
+        private async void getButton_Click(object sender, RoutedEventArgs e)
+        {
+            var enumerableImages = await cachedPictures.GetValueAsync();
+            storedFilename.Text = "FilesSuccessfullyObtained.txt";
+        }
+    }
+
+    public sealed class Pictures
+    {
+        public string PictureValue;
+    }
 }

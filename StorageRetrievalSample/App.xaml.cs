@@ -125,5 +125,11 @@ namespace StorageRetrievalSample
             // TODO: Save application state and stop any background activity
             deferral.Complete();
         }
-    }
+
+	    protected override void OnActivated(IActivatedEventArgs e)
+	    {
+            base.OnActivated(e);
+	        (Window.Current.Content as MainPage)?.ContinueFromPicker(e as FileOpenPickerContinuationEventArgs);
+	    }
+	}
 }
