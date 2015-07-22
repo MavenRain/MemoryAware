@@ -28,6 +28,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitmapImage.h" />
+    <ClInclude Include="StorageMode.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BitmapImage.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1801ba5a-0878-4e88-9584-1b2b57194a06}</ProjectGuid>

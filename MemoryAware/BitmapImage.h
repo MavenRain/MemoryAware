@@ -1,47 +1,20 @@
 #pragma once
 
-namespace Platform
+namespace MemoryAware
 {
-	ref class Object;
-	ref class String;
-}
-
-namespace Windows
-{
-	namespace Foundation
-	{
-		ref class Uri;
-	}
-
-	namespace UI
-	{
-		namespace Xaml
-		{
-			namespace Media
-			{
-				namespace Imaging
-				{
-					ref class DownloadProgressEventArgs;
-					delegate void DownloadProgressEventHandler(Platform::Object^, DownloadProgressEventArgs^);
-				}
-			}
-			ref class RoutedEventArgs;
-			delegate void RoutedEventHandler(Platform::Object^, RoutedEventArgs^);
-			ref class ExceptionRoutedEventArgs;
-			delegate void ExceptionRoutedEventHandler(Platform::Object^, ExceptionRoutedEventArgs^);
-		}
-	}
+	enum class StorageMode;
 }
 
 namespace MemoryAware
 {
 	static public ref class BitmapImage sealed
 	{
+		static Platform::Collections::Map<String^, Windows::UI::Xaml::Media::Imaging::BitmapImage^>^ inMemoryImages;
 	public:
-		static bool Create(Platform::String^*);
-		static bool Create(Windows::Foundation::Uri^, Platform::String^*);
-		static event Windows::UI::Xaml::Media::Imaging::DownloadProgressEventHandler^ DownloadProgress;
-		static event ExceptionRoutedEventHandler^ ImageFailed;
-		static event RoutedEventHandler^ ImageOpened;
+		BitmapImage();
+		static bool Create(StorageMode, Platform::String^*);
+		static bool Create(StorageMode, Windows::Foundation::Uri^, Platform::String^*);
+		static bool SetSource(Platform::String^, Windows::Foundation::Uri^);
+		static Windows::Foundation::IAsyncOperation<bool>^ SetSourceAsync(Platform::String^, Windows::Foundation::Uri^);
 	};
 }

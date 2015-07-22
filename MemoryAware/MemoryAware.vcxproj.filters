@@ -8,5 +8,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitmapImage.h" />
+    <ClInclude Include="StorageMode.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BitmapImage.cpp" />
   </ItemGroup>
 </Project>
