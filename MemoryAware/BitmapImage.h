@@ -9,9 +9,9 @@ namespace MemoryAware
 		static bool CreateHandle(Platform::String^*);
 	public:
 		BitmapImage();
-		static bool Create(StorageMode, Platform::String^*);
-		static bool Create(StorageMode, Windows::Foundation::Uri^, Platform::String^*);
-		static bool SetSource(StorageMode, Platform::String^, Windows::Foundation::Uri^);
+		static Windows::Foundation::IAsyncOperation<bool>^ CreateAsync(StorageMode, Platform::String^*);
+		static Windows::Foundation::IAsyncOperation<bool>^ CreateAsync(StorageMode, Windows::Foundation::Uri^, Platform::String^*);
 		static Windows::Foundation::IAsyncOperation<bool>^ SetSourceAsync(StorageMode, Platform::String^, Windows::Foundation::Uri^);
+		static Windows::Foundation::IAsyncAction^ RemoveAsync(Platform::String^);
 	};
 }

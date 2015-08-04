@@ -31,9 +31,9 @@ bool MemoryAware::BitmapImage::CreateHandle(String^* handle)
 	return true;
 }
 
-bool MemoryAware::BitmapImage::Create(StorageMode storageMode, String^* handle)
+IAsyncOperation<bool>^ MemoryAware::BitmapImage::CreateAsync(StorageMode storageMode, String^* handle)
 {
-	if (!CreateHandle(handle)) return false;
+	if (!CreateHandle(handle)) return create_async([] { return false; });
 	switch (storageMode)
 	{
 	case StorageMode::Memory:
@@ -43,12 +43,12 @@ bool MemoryAware::BitmapImage::Create(StorageMode storageMode, String^* handle)
 		ApplicationData::Current->TemporaryFolder->CreateFileAsync(*handle);
 		break;
 	}
-	return true;
+	return create_async([] { return true; });
 }
 
-bool MemoryAware::BitmapImage::Create(StorageMode storageMode, Windows::Foundation::Uri^ uri, Platform::String^* handle)
+IAsyncOperation<bool>^ MemoryAware::BitmapImage::CreateAsync(StorageMode storageMode, Windows::Foundation::Uri^ uri, Platform::String^* handle)
 {
-	if (!CreateHandle(handle)) return false;
+	if (!CreateHandle(handle)) return create_async([] { return false; });
 	switch (storageMode)
 	{
 	case StorageMode::Memory:
@@ -67,30 +67,7 @@ bool MemoryAware::BitmapImage::Create(StorageMode storageMode, Windows::Foundati
 		});
 		break;
 	}
-	return true;
-}
-
-bool MemoryAware::BitmapImage::SetSource(StorageMode storageMode, Platform::String^ handle, Windows::Foundation::Uri^ uri)
-{
-	switch (storageMode)
-	{
-	case StorageMode::Memory:
-		inMemoryImages->Lookup(handle)->UriSource = uri;
-		break;
-	case StorageMode::Disk:
-		create_task(ApplicationData::Current->TemporaryFolder->CreateFileAsync(handle)).then([handle, uri](IStorageFile^ storageFile) 
-		{
-			return create_task(storageFile->OpenAsync(FileAccessMode::ReadWrite));
-		}).then([uri](IRandomAccessStream^ randomAccessStream) 
-		{
-			return create_task((ref new HttpClient())->GetAsync(uri)).then([&randomAccessStream](HttpResponseMessage^ response) 
-			{
-				return create_task(response->Content->WriteToStreamAsync(randomAccessStream));
-			});
-		});
-		break;
-	}
-	return true;
+	return create_async([] { return true; });
 }
 
 IAsyncOperation<bool>^ MemoryAware::BitmapImage::SetSourceAsync(StorageMode storageMode, Platform::String^ handle, Windows::Foundation::Uri^ uri)
@@ -114,16 +91,28 @@ IAsyncOperation<bool>^ MemoryAware::BitmapImage::SetSourceAsync(StorageMode stor
 			{
 				return create_task((ref new HttpClient())->GetAsync(uri)).then([&randomAccessStream](HttpResponseMessage^ response)
 				{
-					return create_task(response->Content->WriteToStreamAsync(randomAccessStream)).then([](unsigned long long bytesRecorded)
-					{
-						return bytesRecorded > 0 ? true : false;
-					});
+					return create_task(response->Content->WriteToStreamAsync(randomAccessStream));
 				});
 			});
 			return true;
 		});
-		
+		break;
+	default:
+		return create_async([] {return false; });
 		break;
 	}
-	return create_async([] {return false; });
+}
+
+IAsyncAction^ MemoryAware::BitmapImage::RemoveAsync(String^ handle)
+{
+	return create_async([handle] 
+	{
+		inMemoryImages->Remove(handle);
+		create_task(ApplicationData::Current->TemporaryFolder->GetFileAsync(handle))
+			.then([](StorageFile^ file)
+		{
+			file->DeleteAsync();
+		});
+	});
+	
 }
