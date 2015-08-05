@@ -33,74 +33,58 @@ bool MemoryAware::BitmapImage::CreateHandle(String^* handle)
 
 IAsyncOperation<bool>^ MemoryAware::BitmapImage::CreateAsync(StorageMode storageMode, String^* handle)
 {
-	if (!CreateHandle(handle)) return create_async([] { return false; });
-	switch (storageMode)
+	auto handleIsCreated = CreateHandle(handle);
+	return create_async([storageMode, handleIsCreated, &handle]
 	{
-	case StorageMode::Memory:
-		inMemoryImages->Insert(*handle, ref new Windows::UI::Xaml::Media::Imaging::BitmapImage());
-		break;
-	case StorageMode::Disk:
-		ApplicationData::Current->TemporaryFolder->CreateFileAsync(*handle);
-		break;
-	}
-	return create_async([] { return true; });
+		if (!handleIsCreated) return false;
+		switch (storageMode)
+		{
+		case StorageMode::Memory:
+			inMemoryImages->Insert(*handle, ref new Windows::UI::Xaml::Media::Imaging::BitmapImage());
+			break;
+		case StorageMode::Disk:
+			ApplicationData::Current->TemporaryFolder->CreateFileAsync(*handle);
+			break;
+		}
+		return true;
+	});
 }
 
 IAsyncOperation<bool>^ MemoryAware::BitmapImage::CreateAsync(StorageMode storageMode, Windows::Foundation::Uri^ uri, Platform::String^* handle)
 {
-	if (!CreateHandle(handle)) return create_async([] { return false; });
-	switch (storageMode)
+	auto handleIsCreated = CreateHandle(handle);
+	return create_async([storageMode, handleIsCreated, &handle, uri]
 	{
-	case StorageMode::Memory:
-		inMemoryImages->Insert(*handle, ref new Windows::UI::Xaml::Media::Imaging::BitmapImage(uri));
-		break;
-	case StorageMode::Disk:
-		create_task(ApplicationData::Current->TemporaryFolder->CreateFileAsync(*handle)).then([handle, uri](IStorageFile^ storageFile) 
+		if (!handleIsCreated) return false;
+		switch (storageMode)
 		{
-			return create_task(storageFile->OpenAsync(FileAccessMode::ReadWrite));
-		}).then([uri](IRandomAccessStream^ randomAccessStream) 
-		{
-			return create_task((ref new HttpClient())->GetAsync(uri)).then([&randomAccessStream](HttpResponseMessage^ response) 
-			{
-				return create_task(response->Content->WriteToStreamAsync(randomAccessStream));
-			});
-		});
-		break;
-	}
-	return create_async([] { return true; });
+		case StorageMode::Memory:
+			inMemoryImages->Insert(*handle, ref new Windows::UI::Xaml::Media::Imaging::BitmapImage(uri));
+			break;
+		case StorageMode::Disk:
+			auto randomAccessStream = ApplicationData::Current->TemporaryFolder->CreateFileAsync(*handle)->GetResults()->OpenAsync(FileAccessMode::ReadWrite)->GetResults();
+			(ref new HttpClient())->GetAsync(uri)->GetResults()->Content->WriteToStreamAsync(randomAccessStream)->GetResults();
+			break;
+		}
+		return true;
+	});
 }
 
-IAsyncOperation<bool>^ MemoryAware::BitmapImage::SetSourceAsync(StorageMode storageMode, Platform::String^ handle, Windows::Foundation::Uri^ uri)
+IAsyncAction^ MemoryAware::BitmapImage::SetSourceAsync(StorageMode storageMode, Platform::String^ handle, Windows::Foundation::Uri^ uri)
 {
-	switch (storageMode)
+	return create_async([storageMode, handle, uri] 
 	{
-	case StorageMode::Memory:
-		return create_async([handle, uri] 
+		switch (storageMode)
 		{
+		case StorageMode::Memory:
 			inMemoryImages->Lookup(handle)->UriSource = uri;
-			return true;
-		});
-		break;
-	case StorageMode::Disk:
-		return create_async([handle, uri] 
-		{
-			create_task(ApplicationData::Current->TemporaryFolder->CreateFileAsync(handle)).then([handle, uri](IStorageFile^ storageFile)
-			{
-				return create_task(storageFile->OpenAsync(FileAccessMode::ReadWrite));
-			}).then([uri](IRandomAccessStream^ randomAccessStream)
-			{
-				return create_task((ref new HttpClient())->GetAsync(uri)).then([&randomAccessStream](HttpResponseMessage^ response)
-				{
-					return create_task(response->Content->WriteToStreamAsync(randomAccessStream));
-				});
-			});
-			return true;
-		});
-		break;
-	default:
-		return create_async([] {return false; });
-		break;
-	}
+			break;
+		case StorageMode::Disk:
+			auto randomAccessStream = ApplicationData::Current->TemporaryFolder->CreateFileAsync(handle)->GetResults()->OpenAsync(FileAccessMode::ReadWrite)->GetResults();
+			(ref new HttpClient())->GetAsync(uri)->GetResults()->Content->WriteToStreamAsync(randomAccessStream)->GetResults();
+			break;
+		}
+	});
 }
 
 IAsyncAction^ MemoryAware::BitmapImage::RemoveAsync(String^ handle)
@@ -108,11 +92,7 @@ IAsyncAction^ MemoryAware::BitmapImage::RemoveAsync(String^ handle)
 	return create_async([handle] 
 	{
 		inMemoryImages->Remove(handle);
-		create_task(ApplicationData::Current->TemporaryFolder->GetFileAsync(handle))
-			.then([](StorageFile^ file)
-		{
-			file->DeleteAsync();
-		});
+		ApplicationData::Current->TemporaryFolder->GetFileAsync(handle)->GetResults()->DeleteAsync();
 	});
 	
 }

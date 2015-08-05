@@ -11,7 +11,7 @@ namespace MemoryAware
 		BitmapImage();
 		static Windows::Foundation::IAsyncOperation<bool>^ CreateAsync(StorageMode, Platform::String^*);
 		static Windows::Foundation::IAsyncOperation<bool>^ CreateAsync(StorageMode, Windows::Foundation::Uri^, Platform::String^*);
-		static Windows::Foundation::IAsyncOperation<bool>^ SetSourceAsync(StorageMode, Platform::String^, Windows::Foundation::Uri^);
+		static Windows::Foundation::IAsyncAction^ SetSourceAsync(StorageMode, Platform::String^, Windows::Foundation::Uri^);
 		static Windows::Foundation::IAsyncAction^ RemoveAsync(Platform::String^);
 	};
 }
